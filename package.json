@@ -2,6 +2,7 @@
   "name": "@zos-apps/app-store",
   "version": "4.2.0",
   "description": "Discover and install apps from zos-apps",
+  "homepage": "https://zos-apps.github.io/app-store",
   "main": "src/index.tsx",
   "types": "src/index.tsx",
   "files": ["src"],
@@ -11,18 +12,35 @@
     "icon": "🏪",
     "category": "system",
     "permissions": ["network"],
-    "installable": true
+    "installable": true,
+    "shortcut": "",
+    "menu": {
+      "help": {
+        "documentation": "https://zos-apps.github.io/app-store",
+        "reportIssue": "https://github.com/zos-apps/app-store/issues"
+      }
+    },
+    "contextMenu": [
+      {"label": "Open", "action": "open"},
+      {"label": "Open in New Window", "action": "openNew"},
+      {"type": "separator"},
+      {"label": "Get Info", "action": "getInfo"},
+      {"label": "Show in Finder", "action": "showInFinder"}
+    ]
   },
   "peerDependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "lucide-react": ">=0.300.0"
   },
-  "keywords": ["zos", "app", "app-store"],
+  "keywords": ["zos", "app", "app-store", "macos", "desktop"],
   "author": "Hanzo AI",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zos-apps/app-store.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zos-apps/app-store/issues"
   }
 }

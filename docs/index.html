@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏪 App Store - zOS App Documentation</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --success: #3fb950;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+    .icon { font-size: 4rem; margin-bottom: 1rem; }
+    h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .version {
+      display: inline-block;
+      background: var(--success);
+      color: #000;
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    .description {
+      color: var(--text-muted);
+      font-size: 1.25rem;
+      margin-top: 1rem;
+    }
+    .badges {
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .badge {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 0.25rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+    }
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      overflow-x: auto;
+      font-size: 0.875rem;
+    }
+    code {
+      font-family: 'SF Mono', Consolas, monospace;
+      background: var(--bg);
+      padding: 0.125rem 0.375rem;
+      border-radius: 0.25rem;
+    }
+    pre code { background: none; padding: 0; }
+    ul, ol { padding-left: 1.5rem; }
+    li { margin-bottom: 0.5rem; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .shortcut {
+      display: inline-block;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-family: monospace;
+      font-size: 0.875rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    th { color: var(--text-muted); font-weight: 500; }
+    footer {
+      text-align: center;
+      padding: 2rem 0;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="icon">🏪</div>
+    <h1>App Store</h1>
+    <span class="version">v4.2.0</span>
+    <p class="description">Discover and install apps from zos-apps</p>
+    <div class="badges">
+      <span class="badge">system</span>
+      <span class="badge">zOS 4.2+</span>
+      <span class="badge">React 18+</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Installation</h2>
+    <pre><code>npm install github:zos-apps/app-store</code></pre>
+    <p style="margin-top: 1rem; color: var(--text-muted);">
+      Or install via the <a href="https://zos-apps.github.io/app-store">App Store</a>
+    </p>
+  </section>
+
+  <section>
+    <h2>Usage</h2>
+    <pre><code>import App Store from '@zos-apps/app-store';
+
+function MyApp() {
+  return &lt;App Store /&gt;;
+}</code></pre>
+  </section>
+
+  <section>
+    <h2>Features</h2>
+    <ul>
+      <li>Native zOS integration</li>
+      <li>Dark mode support</li>
+      <li>Responsive design</li>
+      <li>Keyboard shortcuts</li>
+      <li>Context menu actions</li>
+    </ul>
+  </section>
+
+  
+
+  <section>
+    <h2>Context Menu</h2>
+    <p>Right-click actions available:</p>
+    <ul>
+      <li><strong>Open</strong> - Launch the app</li>
+      <li><strong>Open in New Window</strong> - Open a new instance</li>
+      <li><strong>Get Info</strong> - View app information</li>
+      <li><strong>Show in Finder</strong> - Locate app files</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Permissions</h2>
+    <ul>
+<li><code>network</code></li>
+</ul>
+  </section>
+
+  <section>
+    <h2>Menu Bar Integration</h2>
+    <p>When active, App Store adds the following menu items:</p>
+    <ul>
+      <li><strong>App Store</strong> → About, Preferences, Quit</li>
+      <li><strong>File</strong> → New, Open, Save, Close</li>
+      <li><strong>Edit</strong> → Undo, Redo, Cut, Copy, Paste</li>
+      <li><strong>View</strong> → Zoom, Enter Full Screen</li>
+      <li><strong>Window</strong> → Minimize, Zoom, Bring All to Front</li>
+      <li><strong>Help</strong> → App Store Help, Documentation</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>API Reference</h2>
+    <pre><code>interface AppProps {
+  className?: string;
+  config?: App StoreConfig;
+  onClose?: () => void;
+  onFocus?: () => void;
+}</code></pre>
+  </section>
+
+  <section>
+    <h2>Links</h2>
+    <ul>
+      <li><a href="https://github.com/zos-apps/app-store">GitHub Repository</a></li>
+      <li><a href="https://github.com/zos-apps/app-store/issues">Report Issues</a></li>
+      <li><a href="https://github.com/zos-apps">All zOS Apps</a></li>
+      <li><a href="https://zos-apps.github.io/app-store">App Store</a></li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>🏪 App Store v4.2.0 • MIT License • <a href="https://hanzo.ai">Hanzo AI</a></p>
+    <p style="margin-top: 0.5rem;">Part of the <a href="https://github.com/zos-apps">zOS Apps</a> ecosystem</p>
+  </footer>
+</body>
+</html>
