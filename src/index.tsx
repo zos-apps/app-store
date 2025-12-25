@@ -37,6 +37,7 @@ const STORAGE_KEY = 'zos:apps:installed';
 
 /**
  * Fetch available apps from GitHub zos-apps organization
+ * Reads app metadata from package.json "zos" field
  */
 async function fetchZosApps(): Promise<AppManifest[]> {
   try {
@@ -47,21 +48,38 @@ async function fetchZosApps(): Promise<AppManifest[]> {
     const repos = await response.json();
     const apps: AppManifest[] = [];
 
-    // Fetch manifest from each repo
+    // Fetch package.json from each repo
     for (const repo of repos) {
       if (repo.name.startsWith('.')) continue;
 
       try {
-        const manifestResponse = await fetch(
-          `https://raw.githubusercontent.com/${GITHUB_ORG}/${repo.name}/main/zos.manifest.json`
+        const pkgResponse = await fetch(
+          `https://raw.githubusercontent.com/${GITHUB_ORG}/${repo.name}/main/package.json`
         );
 
-        if (manifestResponse.ok) {
-          const manifest = await manifestResponse.json();
-          apps.push(manifest);
+        if (pkgResponse.ok) {
+          const pkg = await pkgResponse.json();
+
+          // Check for zos field in package.json
+          if (pkg.zos) {
+            apps.push({
+              id: pkg.zos.id || `ai.hanzo.${repo.name}`,
+              name: pkg.zos.name || pkg.name?.replace('@zos-apps/', '') || repo.name,
+              version: pkg.version || '1.0.0',
+              description: pkg.description || '',
+              icon: pkg.zos.icon || '📦',
+              category: pkg.zos.category || 'utilities',
+              author: pkg.author || 'Hanzo AI',
+              repository: `https://github.com/${GITHUB_ORG}/${repo.name}`,
+              minSdkVersion: pkg.zos.minSdkVersion || '4.0.0',
+              permissions: pkg.zos.permissions || [],
+              installable: pkg.zos.installable !== false,
+              main: pkg.main || 'src/index.tsx',
+            });
+          }
         }
       } catch {
-        // Skip repos without valid manifests
+        // Skip repos without valid package.json
       }
     }
 
