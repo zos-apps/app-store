@@ -5,6 +5,14 @@
   "main": "src/index.tsx",
   "types": "src/index.tsx",
   "files": ["src"],
+  "zos": {
+    "id": "ai.hanzo.appstore",
+    "name": "App Store",
+    "icon": "🏪",
+    "category": "system",
+    "permissions": ["network"],
+    "installable": true
+  },
   "peerDependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0",

@@ -1,4 +1,4 @@
-# 🏪 AppStore
+# 🏪 App Store
 
 > Discover and install apps from zos-apps
 
@@ -13,10 +13,27 @@ npm install github:zos-apps/app-store
 ## Usage
 
 ```tsx
-import ZAppStore from '@zos-apps/app-store';
+import App from '@zos-apps/app-store';
 
-function App() {
-  return <ZAppStore />;
+function MyApp() {
+  return <App />;
+}
+```
+
+## Package Spec
+
+App metadata is defined in `package.json` under the `zos` field:
+
+```json
+{
+  "zos": {
+    "id": "ai.hanzo.appstore",
+    "name": "App Store",
+    "icon": "🏪",
+    "category": "system",
+    "permissions": ["network"],
+    "installable": true
+  }
 }
 ```
 
