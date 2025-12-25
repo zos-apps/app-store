@@ -1,15 +1,150 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { AppProps } from './types';
-import {
-  getAppRegistry,
-  fetchGitHubApps,
-  BUNDLED_APPS,
-  type AppManifest,
-  type InstalledApp,
-  type AppUpdate,
-} from '../registry';
 
 type TabType = 'discover' | 'installed' | 'updates';
+
+export interface AppManifest {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  icon: string;
+  category: 'productivity' | 'utilities' | 'entertainment' | 'developer' | 'system';
+  author: string;
+  repository: string;
+  minSdkVersion: string;
+  permissions: string[];
+  installable?: boolean;
+  main?: string;
+}
+
+export interface InstalledApp extends AppManifest {
+  installedAt: string;
+  installedVersion: string;
+  source: 'bundled' | 'github' | 'local';
+}
+
+export interface AppUpdate {
+  id: string;
+  currentVersion: string;
+  latestVersion: string;
+  releaseNotes?: string;
+}
+
+// GitHub organization for zOS apps
+const GITHUB_ORG = 'zos-apps';
+const STORAGE_KEY = 'zos:apps:installed';
+
+/**
+ * Fetch available apps from GitHub zos-apps organization
+ */
+async function fetchZosApps(): Promise<AppManifest[]> {
+  try {
+    // Fetch all repos from the organization
+    const response = await fetch(`https://api.github.com/orgs/${GITHUB_ORG}/repos?per_page=100`);
+    if (!response.ok) throw new Error('Failed to fetch repos');
+
+    const repos = await response.json();
+    const apps: AppManifest[] = [];
+
+    // Fetch manifest from each repo
+    for (const repo of repos) {
+      if (repo.name.startsWith('.')) continue;
+
+      try {
+        const manifestResponse = await fetch(
+          `https://raw.githubusercontent.com/${GITHUB_ORG}/${repo.name}/main/zos.manifest.json`
+        );
+
+        if (manifestResponse.ok) {
+          const manifest = await manifestResponse.json();
+          apps.push(manifest);
+        }
+      } catch {
+        // Skip repos without valid manifests
+      }
+    }
+
+    return apps;
+  } catch (e) {
+    console.error('[zOS App Store] Failed to fetch apps:', e);
+    return [];
+  }
+}
+
+/**
+ * Check for available updates
+ */
+async function checkForUpdates(installedApps: InstalledApp[]): Promise<AppUpdate[]> {
+  const updates: AppUpdate[] = [];
+
+  try {
+    const availableApps = await fetchZosApps();
+
+    for (const installed of installedApps) {
+      const available = availableApps.find(a => a.id === installed.id);
+      if (available && compareVersions(installed.installedVersion, available.version) < 0) {
+        updates.push({
+          id: installed.id,
+          currentVersion: installed.installedVersion,
+          latestVersion: available.version,
+        });
+      }
+    }
+  } catch (e) {
+    console.error('[zOS App Store] Failed to check updates:', e);
+  }
+
+  return updates;
+}
+
+/**
+ * Compare semantic versions
+ */
+function compareVersions(v1: string, v2: string): number {
+  const parts1 = v1.split('.').map(Number);
+  const parts2 = v2.split('.').map(Number);
+
+  for (let i = 0; i < 3; i++) {
+    const p1 = parts1[i] || 0;
+    const p2 = parts2[i] || 0;
+    if (p1 < p2) return -1;
+    if (p1 > p2) return 1;
+  }
+
+  return 0;
+}
+
+/**
+ * Load installed apps from storage
+ */
+function loadInstalledApps(): InstalledApp[] {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('[zOS App Store] Failed to load apps:', e);
+  }
+
+  return [];
+}
+
+/**
+ * Save installed apps to storage
+ */
+function saveInstalledApps(apps: InstalledApp[]): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(apps));
+  } catch (e) {
+    console.error('[zOS App Store] Failed to save apps:', e);
+  }
+}
 
 const ZAppStore: React.FC<AppProps> = ({ className }) => {
   const [availableApps, setAvailableApps] = useState<AppManifest[]>([]);
@@ -21,63 +156,52 @@ const ZAppStore: React.FC<AppProps> = ({ className }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [installing, setInstalling] = useState<string | null>(null);
 
-  const registry = getAppRegistry();
-
   // Load data
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Load installed apps
-      setInstalledApps(registry.getInstalledApps());
+      // Load installed apps from storage
+      const installed = loadInstalledApps();
+      setInstalledApps(installed);
 
       // Fetch available apps from GitHub
-      const githubApps = await fetchGitHubApps();
-
-      // Combine with bundled apps, avoiding duplicates
-      const allApps = [...BUNDLED_APPS];
-      for (const app of githubApps) {
-        if (!allApps.some(a => a.id === app.id)) {
-          allApps.push(app);
-        }
-      }
-      setAvailableApps(allApps);
+      const apps = await fetchZosApps();
+      setAvailableApps(apps);
 
       // Check for updates
-      const appUpdates = await registry.checkForUpdates();
+      const appUpdates = await checkForUpdates(installed);
       setUpdates(appUpdates);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load apps');
     } finally {
       setLoading(false);
     }
-  }, [registry]);
+  }, []);
 
   useEffect(() => {
     loadData();
-
-    // Listen for app changes
-    const handleAppChange = () => {
-      setInstalledApps(registry.getInstalledApps());
-    };
-
-    window.addEventListener('zos:app-installed', handleAppChange);
-    window.addEventListener('zos:app-uninstalled', handleAppChange);
-    window.addEventListener('zos:app-updated', handleAppChange);
-
-    return () => {
-      window.removeEventListener('zos:app-installed', handleAppChange);
-      window.removeEventListener('zos:app-uninstalled', handleAppChange);
-      window.removeEventListener('zos:app-updated', handleAppChange);
-    };
-  }, [loadData, registry]);
+  }, [loadData]);
 
   const handleInstall = async (app: AppManifest) => {
     setInstalling(app.id);
     try {
-      await registry.install(app, 'github');
-      setInstalledApps(registry.getInstalledApps());
+      const installedApp: InstalledApp = {
+        ...app,
+        installedAt: new Date().toISOString(),
+        installedVersion: app.version,
+        source: 'github',
+      };
+
+      const newInstalledApps = [...installedApps, installedApp];
+      setInstalledApps(newInstalledApps);
+      saveInstalledApps(newInstalledApps);
+
+      // Dispatch event for UI updates
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('zos:app-installed', { detail: installedApp }));
+      }
     } catch (err) {
       alert(`Failed to install ${app.name}`);
     } finally {
@@ -86,17 +210,30 @@ const ZAppStore: React.FC<AppProps> = ({ className }) => {
   };
 
   const handleUninstall = (id: string) => {
-    if (registry.uninstall(id)) {
-      setInstalledApps(registry.getInstalledApps());
+    const newInstalledApps = installedApps.filter(a => a.id !== id);
+    setInstalledApps(newInstalledApps);
+    saveInstalledApps(newInstalledApps);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('zos:app-uninstalled', { detail: { id } }));
     }
   };
 
   const handleUpdate = async (update: AppUpdate) => {
     setInstalling(update.id);
     try {
-      await registry.update(update.id, update.latestVersion);
-      setInstalledApps(registry.getInstalledApps());
+      const newInstalledApps = installedApps.map(app =>
+        app.id === update.id
+          ? { ...app, installedVersion: update.latestVersion, version: update.latestVersion }
+          : app
+      );
+      setInstalledApps(newInstalledApps);
+      saveInstalledApps(newInstalledApps);
       setUpdates(updates.filter(u => u.id !== update.id));
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('zos:app-updated', { detail: { id: update.id } }));
+      }
     } catch (err) {
       alert(`Failed to update app`);
     } finally {
@@ -104,7 +241,7 @@ const ZAppStore: React.FC<AppProps> = ({ className }) => {
     }
   };
 
-  const isInstalled = (id: string) => registry.isInstalled(id);
+  const isInstalled = (id: string) => installedApps.some(a => a.id === id);
 
   const filteredApps = availableApps.filter(app =>
     app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -172,7 +309,7 @@ const ZAppStore: React.FC<AppProps> = ({ className }) => {
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
-              <p className="text-gray-400">Loading apps from github.com/z-os4...</p>
+              <p className="text-gray-400">Loading apps from github.com/{GITHUB_ORG}...</p>
             </div>
           </div>
         ) : error ? (
@@ -196,7 +333,7 @@ const ZAppStore: React.FC<AppProps> = ({ className }) => {
               >
                 <div className="flex items-start gap-4">
                   {/* App Icon */}
-                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${categoryColors[app.category]} flex items-center justify-center text-3xl shadow-lg`}>
+                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${categoryColors[app.category] || categoryColors.utilities} flex items-center justify-center text-3xl shadow-lg`}>
                     {app.icon}
                   </div>
 
@@ -234,7 +371,7 @@ const ZAppStore: React.FC<AppProps> = ({ className }) => {
                 </div>
 
                 {/* Permissions */}
-                {app.permissions.length > 0 && (
+                {app.permissions && app.permissions.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t border-gray-700/50">
                     {app.permissions.map(perm => (
                       <span key={perm} className="px-2 py-0.5 bg-yellow-900/30 rounded text-xs text-yellow-400">
@@ -245,6 +382,13 @@ const ZAppStore: React.FC<AppProps> = ({ className }) => {
                 )}
               </div>
             ))}
+
+            {filteredApps.length === 0 && !loading && (
+              <div className="col-span-2 text-center text-gray-400 py-12">
+                <p className="text-4xl mb-4">🔍</p>
+                <p>No apps found matching "{searchQuery}"</p>
+              </div>
+            )}
           </div>
         ) : activeTab === 'installed' ? (
           <div className="space-y-3">
@@ -260,7 +404,7 @@ const ZAppStore: React.FC<AppProps> = ({ className }) => {
                   key={app.id}
                   className="bg-gray-800/50 rounded-xl p-4 flex items-center gap-4 border border-gray-700/50"
                 >
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${categoryColors[app.category]} flex items-center justify-center text-2xl`}>
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${categoryColors[app.category] || categoryColors.utilities} flex items-center justify-center text-2xl`}>
                     {app.icon}
                   </div>
                   <div className="flex-1">
@@ -271,14 +415,12 @@ const ZAppStore: React.FC<AppProps> = ({ className }) => {
                       <span className="capitalize">{app.source}</span>
                     </div>
                   </div>
-                  {app.source !== 'bundled' && (
-                    <button
-                      onClick={() => handleUninstall(app.id)}
-                      className="text-red-400 hover:text-red-300 text-sm"
-                    >
-                      Uninstall
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleUninstall(app.id)}
+                    className="text-red-400 hover:text-red-300 text-sm"
+                  >
+                    Uninstall
+                  </button>
                 </div>
               ))
             )}
@@ -301,7 +443,7 @@ const ZAppStore: React.FC<AppProps> = ({ className }) => {
                     className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50"
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${categoryColors[app.category]} flex items-center justify-center text-2xl`}>
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${categoryColors[app.category] || categoryColors.utilities} flex items-center justify-center text-2xl`}>
                         {app.icon}
                       </div>
                       <div className="flex-1">
@@ -338,14 +480,14 @@ const ZAppStore: React.FC<AppProps> = ({ className }) => {
       <div className="flex-shrink-0 p-3 border-t border-gray-700 text-center text-xs text-gray-500">
         Apps from{' '}
         <a
-          href="https://github.com/z-os4"
+          href={`https://github.com/${GITHUB_ORG}`}
           className="text-blue-400 hover:underline"
           target="_blank"
           rel="noopener noreferrer"
         >
-          github.com/z-os4
+          github.com/{GITHUB_ORG}
         </a>
-        {' '}• {installedApps.length} installed
+        {' '}• {availableApps.length} available • {installedApps.length} installed
       </div>
     </div>
   );
